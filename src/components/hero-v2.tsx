@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Sparkles } from 'lucide-react';
 
-// Simple, clear animation sequence (no confusing 3D)
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -21,10 +20,6 @@ const itemVariants = {
     transition: { duration: 0.8, ease: 'easeOut' },
   },
 };
-
-// ============================================================================
-// TWEET COMPONENT
-// ============================================================================
 
 interface TweetProps {
   author: string;
@@ -56,73 +51,73 @@ const Tweet = ({ author, handle, avatar, text, time, isActive }: TweetProps) => 
   </div>
 );
 
-// ============================================================================
-// HERO COMPONENT - SIMPLIFIED ANIMATION
-// ============================================================================
-
 export function HeroV2() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [typedText, setTypedText] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [showAlternatives, setShowAlternatives] = useState(false);
+  const [browserLoaded, setBrowserLoaded] = useState(false);
   const draftButtonRef = useRef<HTMLDivElement>(null);
 
   const fullDraftText =
     '@alexsmith Your perspective is refreshing. Have you considered how this scales across...';
 
   // =========================================================================
-  // MASTER ANIMATION SEQUENCE - FLUID, NO GAPS
-  // Total cycle: 7.5 seconds
+  // PAGE LOAD - One-time entrance animation for browser mockup
+  // Then immediately start cursor sequence
   // =========================================================================
   useEffect(() => {
-    const startAnimation = () => {
-      setIsPlaying(true);
+    // Entrance animation: fade + scale in (0.6s)
+    setTimeout(() => setBrowserLoaded(true), 100);
+
+    // Start animation sequence after entrance completes
+    setTimeout(() => {
+      startAnimationSequence();
+    }, 700);
+  }, []);
+
+  // =========================================================================
+  // ANIMATION SEQUENCE - Loops every 7 seconds
+  // =========================================================================
+  const startAnimationSequence = () => {
+    setIsPlaying(true);
+    setTypedText('');
+    setShowAlternatives(false);
+    setIsGenerating(false);
+
+    // Phase 1: Show button with glow (0-0.6s)
+    setTimeout(() => {
+      setIsGenerating(true);
+    }, 600);
+
+    // Phase 2: Start typing (0.6-1.0s, then continues)
+    setTimeout(() => {
+      let index = 0;
+      const typeInterval = setInterval(() => {
+        if (index < fullDraftText.length) {
+          setTypedText(fullDraftText.slice(0, index + 1));
+          index++;
+        } else {
+          clearInterval(typeInterval);
+          // Alternatives appear immediately
+          setShowAlternatives(true);
+          setIsGenerating(false);
+        }
+      }, 40); // 40ms per character
+
+      return () => clearInterval(typeInterval);
+    }, 1000);
+
+    // Phase 3: Reset and restart (6.5s total)
+    setTimeout(() => {
+      setIsPlaying(false);
       setTypedText('');
       setShowAlternatives(false);
-      setIsGenerating(false);
 
-      // Phase 1: Button highlight (0-0.6s) - very quick
-      // (just show the button with glow)
-
-      // Phase 2: Button click effect + start generating (0.6-1.0s)
-      setTimeout(() => {
-        setIsGenerating(true);
-      }, 600);
-
-      // Phase 3: Typing starts immediately (1.0s) - seamless transition
-      setTimeout(() => {
-        let index = 0;
-        const typeInterval = setInterval(() => {
-          if (index < fullDraftText.length) {
-            setTypedText(fullDraftText.slice(0, index + 1));
-            index++;
-          } else {
-            clearInterval(typeInterval);
-            // Alternatives appear immediately after typing ends (no delay)
-            setShowAlternatives(true);
-            setIsGenerating(false);
-          }
-        }, 40); // Slightly faster: 40ms per character for snappier feel
-
-        return () => clearInterval(typeInterval);
-      }, 1000);
-
-      // Phase 4: Reset and loop (7.5s)
-      setTimeout(() => {
-        setIsPlaying(false);
-        setTypedText('');
-        setShowAlternatives(false);
-        setIsGenerating(false);
-      }, 7500);
-    };
-
-    // Auto-play on mount
-    startAnimation();
-
-    // Loop every 8 seconds (7.5s animation + 0.5s gap)
-    const timer = setInterval(startAnimation, 8000);
-    return () => clearInterval(timer);
-  }, []);
+      // Quick reset, then loop
+      setTimeout(() => startAnimationSequence(), 300);
+    }, 6500);
+  };
 
   return (
     <section className="relative min-h-screen overflow-hidden bg-gradient-to-b from-gray-950 via-gray-900 to-black">
@@ -246,10 +241,18 @@ export function HeroV2() {
             </motion.div>
           </motion.div>
 
-          {/* RIGHT - Browser mockup */}
-          <motion.div variants={itemVariants} className="relative h-full w-full">
-            {/* Clean browser window - NO 3D rotation */}
-            <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-gray-700 bg-gray-950">
+          {/* RIGHT - Browser mockup (ONE entrance animation, then static) */}
+          <motion.div
+            variants={itemVariants}
+            className="relative h-full w-full"
+          >
+            {/* Browser window - entrance: fade + scale in */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92 }}
+              animate={browserLoaded ? { opacity: 1, scale: 1 } : {}}
+              transition={{ duration: 0.6, ease: 'easeOut' }}
+              className="relative rounded-2xl overflow-hidden shadow-2xl border border-gray-700 bg-gray-950"
+            >
               {/* Chrome bar */}
               <div className="bg-gray-900 border-b border-gray-700 px-4 py-3 flex items-center gap-2 backdrop-blur">
                 <div className="flex gap-2">
@@ -285,7 +288,7 @@ export function HeroV2() {
                     isActive={false}
                   />
 
-                  {/* Reply section - only show when animating */}
+                  {/* Reply section - animated during sequence */}
                   {isPlaying && (
                     <motion.div
                       initial={{ opacity: 0, y: 20 }}
@@ -308,7 +311,7 @@ export function HeroV2() {
                             transition={{ delay: 0.1, duration: 0.3 }}
                             className="relative"
                           >
-                            {/* Click ripple effect */}
+                            {/* Ripple effect */}
                             {isGenerating && (
                               <motion.div
                                 className="absolute inset-0 rounded-full bg-blue-400"
@@ -343,7 +346,7 @@ export function HeroV2() {
                           </motion.div>
                         </div>
 
-                        {/* Generated text area - appears when generating or typing */}
+                        {/* Generated text */}
                         {(isGenerating || typedText) && (
                           <motion.div
                             initial={{ opacity: 0, y: 10 }}
@@ -352,29 +355,39 @@ export function HeroV2() {
                             className="bg-gray-900 border border-gray-700 rounded-xl p-4 min-h-[100px] flex items-center"
                           >
                             {isGenerating && !typedText ? (
-                              // Animated generating dots
                               <div className="flex items-center gap-2">
                                 <span className="text-gray-400 text-sm">Generating</span>
                                 <div className="flex gap-1">
                                   <motion.span
                                     animate={{ opacity: [0.5, 1, 0.5] }}
-                                    transition={{ duration: 1.2, repeat: Infinity, delay: 0 }}
+                                    transition={{
+                                      duration: 1.2,
+                                      repeat: Infinity,
+                                      delay: 0,
+                                    }}
                                     className="w-1.5 h-1.5 bg-blue-400 rounded-full"
                                   />
                                   <motion.span
                                     animate={{ opacity: [0.5, 1, 0.5] }}
-                                    transition={{ duration: 1.2, repeat: Infinity, delay: 0.2 }}
+                                    transition={{
+                                      duration: 1.2,
+                                      repeat: Infinity,
+                                      delay: 0.2,
+                                    }}
                                     className="w-1.5 h-1.5 bg-blue-400 rounded-full"
                                   />
                                   <motion.span
                                     animate={{ opacity: [0.5, 1, 0.5] }}
-                                    transition={{ duration: 1.2, repeat: Infinity, delay: 0.4 }}
+                                    transition={{
+                                      duration: 1.2,
+                                      repeat: Infinity,
+                                      delay: 0.4,
+                                    }}
                                     className="w-1.5 h-1.5 bg-blue-400 rounded-full"
                                   />
                                 </div>
                               </div>
                             ) : (
-                              // Typed text
                               <p className="text-white text-sm leading-relaxed font-normal">
                                 {typedText}
                                 {typedText.length < fullDraftText.length && (
@@ -394,7 +407,7 @@ export function HeroV2() {
                           </motion.div>
                         )}
 
-                        {/* Alternatives - smooth, immediate appearance */}
+                        {/* Alternatives */}
                         {showAlternatives && (
                           <motion.div
                             initial={{ opacity: 0, y: 8 }}
@@ -427,7 +440,7 @@ export function HeroV2() {
                   )}
                 </div>
               </div>
-            </div>
+            </motion.div>
           </motion.div>
         </motion.div>
       </div>
