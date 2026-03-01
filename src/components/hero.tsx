@@ -496,13 +496,14 @@ export function Hero() {
                 </motion.span>
               </motion.a>
 
-              <motion.button
+              <motion.a
+                href="/demo"
                 whileHover={{ scale: 1.05, borderColor: '#60a5fa' }}
                 whileTap={{ scale: 0.95 }}
                 className="inline-flex items-center justify-center px-8 py-4 border border-gray-700 hover:border-blue-500 text-white font-semibold rounded-full transition-all duration-300"
               >
                 Watch Demo
-              </motion.button>
+              </motion.a>
             </motion.div>
 
             {/* Stats */}
