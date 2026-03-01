@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Sparkles } from 'lucide-react';
 
@@ -61,12 +61,54 @@ export function HeroV2() {
     '@alexsmith Your perspective is refreshing. Have you considered how this scales across...';
 
   // =========================================================================
+  // ANIMATION SEQUENCE - Main loop every 6.5 seconds (DEFINED FIRST)
+  // =========================================================================
+  const startAnimationSequence = useCallback(() => {
+    setIsPlaying(true);
+    setTypedText('');
+    setShowAlternatives(false);
+    setIsGenerating(false);
+    setCursorPos({ x: 0, y: 0, visible: false });
+
+    // Phase 1: Button highlights (0-0.6s)
+    setTimeout(() => {
+      setIsGenerating(true);
+    }, 600);
+
+    // Phase 2: Text types (1.0-4.0s)
+    setTimeout(() => {
+      let index = 0;
+      const typeInterval = setInterval(() => {
+        if (index < fullDraftText.length) {
+          setTypedText(fullDraftText.slice(0, index + 1));
+          index++;
+        } else {
+          clearInterval(typeInterval);
+          setShowAlternatives(true);
+          setIsGenerating(false);
+        }
+      }, 40);
+
+      return () => clearInterval(typeInterval);
+    }, 1000);
+
+    // Phase 3: Reset and restart (6.5s total)
+    setTimeout(() => {
+      setIsPlaying(false);
+      setTypedText('');
+      setShowAlternatives(false);
+
+      setTimeout(() => startAnimationSequence(), 300);
+    }, 6500);
+  }, [fullDraftText]);
+
+  // =========================================================================
   // PAGE LOAD - One-time entrance animation
   // =========================================================================
   useEffect(() => {
     setTimeout(() => setBrowserLoaded(true), 100);
     setTimeout(() => startAnimationSequence(), 700);
-  }, []);
+  }, [startAnimationSequence]);
 
   // =========================================================================
   // CURSOR ANIMATION - Moves from browser edge to button (NO 3D)
@@ -115,48 +157,6 @@ export function HeroV2() {
       return () => cancelAnimationFrame(frameId);
     }
   }, [isPlaying]);
-
-  // =========================================================================
-  // ANIMATION SEQUENCE - Main loop every 6.5 seconds
-  // =========================================================================
-  const startAnimationSequence = () => {
-    setIsPlaying(true);
-    setTypedText('');
-    setShowAlternatives(false);
-    setIsGenerating(false);
-    setCursorPos({ x: 0, y: 0, visible: false });
-
-    // Phase 1: Button highlights (0-0.6s)
-    setTimeout(() => {
-      setIsGenerating(true);
-    }, 600);
-
-    // Phase 2: Text types (1.0-4.0s)
-    setTimeout(() => {
-      let index = 0;
-      const typeInterval = setInterval(() => {
-        if (index < fullDraftText.length) {
-          setTypedText(fullDraftText.slice(0, index + 1));
-          index++;
-        } else {
-          clearInterval(typeInterval);
-          setShowAlternatives(true);
-          setIsGenerating(false);
-        }
-      }, 40);
-
-      return () => clearInterval(typeInterval);
-    }, 1000);
-
-    // Phase 3: Reset and restart (6.5s total)
-    setTimeout(() => {
-      setIsPlaying(false);
-      setTypedText('');
-      setShowAlternatives(false);
-
-      setTimeout(() => startAnimationSequence(), 300);
-    }, 6500);
-  };
 
   return (
     <section className="relative min-h-screen overflow-hidden bg-gradient-to-b from-gray-950 via-gray-900 to-black">
