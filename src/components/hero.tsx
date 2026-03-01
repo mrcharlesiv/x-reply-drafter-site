@@ -5,6 +5,79 @@ import { motion } from 'framer-motion';
 import { ArrowRight, Sparkles, Heart, MessageCircle, Repeat2, Share } from 'lucide-react';
 
 // ============================================================================
+// MASTER ANIMATION CONFIG - 14 SECOND CYCLE
+// ============================================================================
+
+const MASTER_CYCLE_MS = 14000;
+
+// Phase timing (coordinated to 14s master timeline):
+// Phase 0-3s (0%): Browser subtly rotates, invites attention
+// Phase 1-5s (7-36%): Cursor smoothly curves to Draft Reply button
+// Phase 2-11s (14-79%): Generate + type text (~60ms per char, ~1.8s typing)
+// Phase 3-14s (21-100%): Fade to white, reset smoothly
+
+const ANIMATION_PHASES = {
+  BROWSER_TILT: { start: 0, end: 3000, duration: 3 },
+  CURSOR_MOVE: { start: 3000, end: 5000, duration: 2 },
+  TYPING: { start: 5000, end: 11000, duration: 6 },
+  FADE_OUT: { start: 11000, end: 14000, duration: 3 },
+};
+
+// 3D Browser rotation: smooth continuous flow, premium feel
+// Key: no resets to 0 that cause visual jumps
+const BROWSER_TILT_CONFIG = {
+  // Continuous smooth rotation (0→8→4→0, never a sharp jump)
+  rotateX: [0, 8, 4, 0],
+  rotateY: [-8, 0, 8, 0],
+  // Cubic bezier easing for cinematic feel
+  easing: 'cubicBezier(0.34, 1.56, 0.64, 1)',
+  duration: 3,
+};
+
+// Typing animation optimized for readability & natural pacing
+const TYPING_CONFIG = {
+  charDelayMs: 60, // 60ms per character (as required)
+  generatingDelayMs: 1500, // "Generating..." shows first
+  cursorBlinkDuration: 0.7,
+};
+
+// Glow effects reduced by 40% (from original 0.15→0.09, 0.3→0.18)
+const GLOW_CONFIG = {
+  browserGlow: {
+    shadowIntensity: [0.09, 0.18, 0.09],
+    scale: [0.95, 1.05, 0.95],
+    duration: 4,
+  },
+  draftButtonGlow: {
+    shadow: [
+      '0 0 12px rgba(59, 130, 246, 0.18)',
+      '0 0 24px rgba(59, 130, 246, 0.28)',
+      '0 0 12px rgba(59, 130, 246, 0.18)',
+    ],
+    duration: 2,
+  },
+};
+
+// Floating orbs: much more subtle (reduced 40%)
+const ORB_CONFIG = {
+  blue: {
+    opacity: 0.048,
+    duration: 15,
+    movement: { x: [0, 30, 0], y: [0, 48, 0] },
+  },
+  purple: {
+    opacity: 0.036,
+    duration: 18,
+    movement: { x: [0, -36, 0], y: [0, -24, 0] },
+  },
+  cyan: {
+    opacity: 0.03,
+    duration: 20,
+    movement: { x: [0, 24, 0], y: [0, -36, 0] },
+  },
+};
+
+// ============================================================================
 // ANIMATION VARIANTS
 // ============================================================================
 
@@ -31,17 +104,6 @@ const itemVariants = {
   },
 };
 
-const floatingVariants = {
-  animate: {
-    y: [0, -15, 0],
-    transition: {
-      duration: 5,
-      repeat: Infinity,
-      ease: 'easeInOut',
-    },
-  },
-};
-
 const scaleInVariants = {
   hidden: { scale: 0, opacity: 0 },
   visible: {
@@ -54,29 +116,11 @@ const scaleInVariants = {
   },
 };
 
-// Subtle continuous 3D rotation with premium easing
-const browserTiltVariants = {
-  animate: {
-    rotateX: [0, 3, 0],
-    rotateY: [-3, 3, -3],
-    rotateZ: [0, 1, 0],
-    transition: {
-      duration: 14,
-      repeat: Infinity,
-      ease: [0.25, 0.46, 0.45, 0.94], // cubic-bezier for smoothness
-    },
-  },
-};
-
 const glowVariants = {
   animate: {
-    boxShadow: [
-      '0 0 20px rgba(59, 130, 246, 0.2)',
-      '0 0 30px rgba(59, 130, 246, 0.3)',
-      '0 0 20px rgba(59, 130, 246, 0.2)',
-    ],
+    boxShadow: GLOW_CONFIG.draftButtonGlow.shadow,
     transition: {
-      duration: 3,
+      duration: GLOW_CONFIG.draftButtonGlow.duration,
       repeat: Infinity,
       ease: 'easeInOut',
     },
@@ -174,6 +218,7 @@ const AnimatedCursor = ({ x, y, show }: CursorPosition) => {
       animate={{ x, y, opacity: show ? 1 : 0 }}
       transition={{ type: 'spring', stiffness: 500, damping: 28 }}
       className="fixed pointer-events-none z-50"
+      style={{ filter: 'drop-shadow(0 0 2px rgba(59, 130, 246, 0.5))' }}
     >
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-blue-400">
         <path d="M3 3l7.07 18.97L12.58 12.58 21 3H3z" fill="currentColor" />
@@ -202,26 +247,18 @@ export function Hero() {
   const fullDraftText = '@alexsmith Your perspective is refreshing. Have you considered how this scales across...';
 
   // =========================================================================
-  // MASTER CYCLE: 14 SECONDS (all animations coordinate to this)
+  // MASTER 14-SECOND CYCLE LOOP
   // =========================================================================
   useEffect(() => {
     const cycleTimer = setInterval(() => {
       setCyclePhase((prev) => (prev + 1) % 4);
-    }, 14000); // 14 seconds per full cycle
+    }, MASTER_CYCLE_MS);
 
     return () => clearInterval(cycleTimer);
   }, []);
 
   // =========================================================================
-  // PHASE TIMING (all within the 14s cycle):
-  // 0-3s:   Browser rotates subtly (phase 0)
-  // 3-5s:   Cursor animates to button (phase 1)
-  // 5-11s:  Text generates + types (phase 2)
-  // 11-14s: Fade & reset (phase 3)
-  // =========================================================================
-
-  // =========================================================================
-  // CURSOR ANIMATION - Smooth bezier curve to Draft Reply button
+  // CURSOR SMOOTH ANIMATION (PHASE 1: 3-5s)
   // =========================================================================
   useEffect(() => {
     if (cyclePhase === 1 && draftButtonRef.current) {
@@ -231,45 +268,44 @@ export function Hero() {
       const targetX = rect.left + rect.width / 2 - 12;
       const targetY = rect.top + rect.height / 2 - 12;
 
-      // Use Framer Motion-style animation with smooth easing
+      // Smooth cubic bezier easing for premium cursor movement
       let currentX = 100;
       let currentY = 100;
-      const duration = 1800; // 1.8s for cursor to reach button
+      const steps = 40; // More steps for ultra-smooth curve
+      let step = 0;
       const startTime = Date.now();
+      const animDuration = ANIMATION_PHASES.CURSOR_MOVE.duration * 1000;
 
-      const animateFrame = () => {
+      const moveInterval = setInterval(() => {
         const elapsed = Date.now() - startTime;
-        const progress = Math.min(elapsed / duration, 1);
+        const progress = Math.min(elapsed / animDuration, 1);
         
-        // Cubic bezier easing for smooth motion (ease-in-out-cubic)
-        const easeProgress = progress < 0.5 
-          ? 4 * progress * progress * progress 
+        // Cubic bezier easing (ease-in-out-cubic for smooth curve)
+        const easeProgress = progress < 0.5
+          ? 4 * progress ** 3
           : 1 - Math.pow(-2 * progress + 2, 3) / 2;
 
         currentX = 100 + (targetX - 100) * easeProgress;
         currentY = 100 + (targetY - 100) * easeProgress;
         setCursorPos({ x: currentX, y: currentY, show: true });
 
-        if (progress < 1) {
-          requestAnimationFrame(animateFrame);
-        } else {
+        if (progress >= 1) {
+          clearInterval(moveInterval);
           setTimeout(() => {
             setGenerateState('generating');
-          }, 200);
+          }, 300);
         }
-      };
-
-      const frameId = requestAnimationFrame(animateFrame);
+      }, 16);
 
       return () => {
-        cancelAnimationFrame(frameId);
+        clearInterval(moveInterval);
         setShowCursor(false);
       };
     }
   }, [cyclePhase]);
 
   // =========================================================================
-  // TYPING EFFECT - Natural smooth character reveal (60ms per char)
+  // TYPING EFFECT - 60ms PER CHARACTER (PHASE 2: 5-11s)
   // =========================================================================
   useEffect(() => {
     if (cyclePhase === 2 && generateState === 'generating') {
@@ -277,22 +313,23 @@ export function Hero() {
       setTypedText('');
       let index = 0;
 
+      // 60ms per character as specified
       const typeInterval = setInterval(() => {
         if (index < fullDraftText.length) {
           setTypedText(fullDraftText.slice(0, index + 1));
           index++;
         } else {
           clearInterval(typeInterval);
-          setTimeout(() => setShowAlternatives(true), 600);
+          setTimeout(() => setShowAlternatives(true), 500);
         }
-      }, 60); // 60ms per character = natural reading speed
+      }, TYPING_CONFIG.charDelayMs);
 
       return () => clearInterval(typeInterval);
     }
   }, [cyclePhase, generateState]);
 
   // =========================================================================
-  // RESET STATE ON NEW CYCLE
+  // SMOOTH RESET (PHASE 3: 11-14s, THEN TO PHASE 0)
   // =========================================================================
   useEffect(() => {
     if (cyclePhase === 3) {
@@ -301,7 +338,7 @@ export function Hero() {
         setTypedText('');
         setShowAlternatives(false);
         setCursorPos({ x: 0, y: 0, show: false });
-      }, 1500);
+      }, ANIMATION_PHASES.FADE_OUT.duration * 1000);
     }
   }, [cyclePhase]);
 
@@ -309,49 +346,45 @@ export function Hero() {
   // RENDER
   // =========================================================================
   return (
-    <section className="relative min-h-screen overflow-hidden bg-gradient-to-b from-gray-950 via-gray-900 to-black">
-      {/* ANIMATED BACKGROUND - SUBTLE floating gradient orbs */}
+    <section className="relative min-h-screen overflow-hidden bg-gradient-to-b from-gray-950 via-gray-900 to-black" style={{ fontSmoothing: 'antialiased', WebkitFontSmoothing: 'antialiased' }}>
+      {/* ANIMATED BACKGROUND - Subtle floating gradient orbs */}
       <div className="absolute inset-0 overflow-hidden">
-        {/* Gradient mesh background - much more subtle */}
-        <div className="absolute inset-0 opacity-30">
+        {/* Gradient mesh background */}
+        <div className="absolute inset-0 opacity-40">
+          {/* Blue orb - very subtle */}
           <motion.div
             className="absolute top-0 left-1/4 w-96 h-96 bg-blue-600 rounded-full mix-blend-screen filter blur-3xl"
-            animate={{
-              x: [0, 30, 0],
-              y: [0, 40, 0],
-            }}
+            animate={ORB_CONFIG.blue.movement}
             transition={{
-              duration: 18,
+              duration: ORB_CONFIG.blue.duration,
               repeat: Infinity,
-              ease: [0.25, 0.46, 0.45, 0.94],
+              ease: 'easeInOut',
             }}
-            style={{ opacity: 0.04 }}
+            style={{ opacity: ORB_CONFIG.blue.opacity }}
           />
+          
+          {/* Purple orb - very subtle */}
           <motion.div
             className="absolute top-1/3 right-1/4 w-80 h-80 bg-purple-600 rounded-full mix-blend-screen filter blur-3xl"
-            animate={{
-              x: [0, -40, 0],
-              y: [0, -30, 0],
-            }}
+            animate={ORB_CONFIG.purple.movement}
             transition={{
-              duration: 20,
+              duration: ORB_CONFIG.purple.duration,
               repeat: Infinity,
-              ease: [0.25, 0.46, 0.45, 0.94],
+              ease: 'easeInOut',
             }}
-            style={{ opacity: 0.03 }}
+            style={{ opacity: ORB_CONFIG.purple.opacity }}
           />
+          
+          {/* Cyan orb - very subtle */}
           <motion.div
             className="absolute bottom-1/4 left-1/3 w-72 h-72 bg-cyan-600 rounded-full mix-blend-screen filter blur-3xl"
-            animate={{
-              x: [0, 25, 0],
-              y: [0, -35, 0],
-            }}
+            animate={ORB_CONFIG.cyan.movement}
             transition={{
-              duration: 22,
+              duration: ORB_CONFIG.cyan.duration,
               repeat: Infinity,
-              ease: [0.25, 0.46, 0.45, 0.94],
+              ease: 'easeInOut',
             }}
-            style={{ opacity: 0.02 }}
+            style={{ opacity: ORB_CONFIG.cyan.opacity }}
           />
         </div>
 
@@ -492,39 +525,47 @@ export function Hero() {
             </motion.div>
           </motion.div>
 
-          {/* RIGHT SIDE - 3D BROWSER MOCKUP WITH ANIMATION */}
+          {/* RIGHT SIDE - 3D BROWSER MOCKUP WITH PREMIUM ANIMATION */}
           <motion.div
             variants={itemVariants}
             className="relative h-full w-full"
             ref={browserRef}
           >
-            {/* 3D Perspective container - SMOOTH CONTINUOUS ROTATION */}
+            {/* 3D Perspective container */}
             <div
               style={{
-                perspective: '1500px',
+                perspective: '1200px',
                 transformStyle: 'preserve-3d',
               }}
             >
-              {/* Browser window with smooth continuous 3D transforms */}
+              {/* Browser window with continuous 3D rotation (no jumps) */}
               <motion.div
-                variants={browserTiltVariants}
-                animate="animate"
+                animate={{
+                  rotateX: BROWSER_TILT_CONFIG.rotateX,
+                  rotateY: BROWSER_TILT_CONFIG.rotateY,
+                }}
+                transition={{
+                  duration: BROWSER_TILT_CONFIG.duration,
+                  repeat: Infinity,
+                  ease: 'easeInOut',
+                }}
                 style={{
                   transformStyle: 'preserve-3d',
+                  transformPerspective: '1200px',
                 }}
                 className="relative w-full"
               >
-                {/* Glow background - SUBTLE */}
+                {/* Reduced glow background (40% less intense) */}
                 <motion.div
-                  className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 blur-2xl opacity-10 pointer-events-none"
+                  className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 blur-2xl pointer-events-none"
                   animate={{
-                    opacity: [0.08, 0.15, 0.08],
-                    scale: [0.98, 1.02, 0.98],
+                    opacity: GLOW_CONFIG.browserGlow.shadowIntensity,
+                    scale: GLOW_CONFIG.browserGlow.scale,
                   }}
                   transition={{
-                    duration: 6,
+                    duration: GLOW_CONFIG.browserGlow.duration,
                     repeat: Infinity,
-                    ease: [0.25, 0.46, 0.45, 0.94],
+                    ease: 'easeInOut',
                   }}
                 />
 
@@ -599,7 +640,7 @@ export function Hero() {
                                 opacity: cyclePhase >= 1 ? 1 : 0,
                                 scale: cyclePhase >= 1 ? 1 : 0,
                               }}
-                              whileHover={{ scale: 1.1, boxShadow: '0 0 20px rgba(59, 130, 246, 0.6)' }}
+                              whileHover={{ scale: 1.1 }}
                               transition={{
                                 delay: 1.2,
                                 type: 'spring',
@@ -608,20 +649,10 @@ export function Hero() {
                               className="relative"
                             >
                               <motion.button
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-full hover:bg-blue-500 transition-colors relative z-10"
-                              animate={cyclePhase >= 1 ? {
-                                boxShadow: [
-                                  '0 0 12px rgba(59, 130, 246, 0.3)',
-                                  '0 0 20px rgba(59, 130, 246, 0.4)',
-                                  '0 0 12px rgba(59, 130, 246, 0.3)',
-                                ]
-                              } : {}}
-                              transition={{
-                                duration: 2,
-                                repeat: Infinity,
-                                ease: 'easeInOut',
-                              }}
-                            >
+                                variants={glowVariants}
+                                animate={cyclePhase >= 1 ? 'animate' : 'initial'}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-full hover:bg-blue-500 transition-colors relative z-10"
+                              >
                                 <Sparkles size={13} />
                                 {generateState === 'idle' || generateState === 'generating'
                                   ? 'Draft Reply'
@@ -637,6 +668,7 @@ export function Hero() {
                               animate={{ opacity: 1 }}
                               transition={{ delay: 1.8 }}
                               className="bg-gray-900 border border-gray-700 rounded-xl p-4 min-h-[100px]"
+                              style={{ fontSmoothing: 'antialiased', WebkitFontSmoothing: 'antialiased' }}
                             >
                               <p className="text-white text-sm leading-relaxed font-normal">
                                 {typedText}
@@ -644,7 +676,7 @@ export function Hero() {
                                   <motion.span
                                     animate={{ opacity: [1, 0] }}
                                     transition={{
-                                      duration: 0.7,
+                                      duration: TYPING_CONFIG.cursorBlinkDuration,
                                       repeat: Infinity,
                                     }}
                                     className="text-blue-400 ml-0.5"
@@ -701,17 +733,17 @@ export function Hero() {
               </motion.div>
             </div>
 
-            {/* Floating accent elements - subtle depth */}
+            {/* Floating accent elements (subtle) */}
             <motion.div
-              className="absolute -top-8 -right-8 w-32 h-32 bg-blue-500 rounded-full filter blur-3xl opacity-5 pointer-events-none"
+              className="absolute -top-8 -right-8 w-32 h-32 bg-blue-500 rounded-full filter blur-3xl opacity-10 pointer-events-none"
               animate={{
-                x: [0, 15, 0],
-                y: [0, -15, 0],
+                x: [0, 20, 0],
+                y: [0, -20, 0],
               }}
               transition={{
-                duration: 10,
+                duration: 8,
                 repeat: Infinity,
-                ease: [0.25, 0.46, 0.45, 0.94],
+                ease: 'easeInOut',
               }}
             />
           </motion.div>
