@@ -2,11 +2,7 @@ import { Stripe } from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+export const dynamic = 'force-dynamic';
 
 const PRICES = {
   pro: 'price_1P...', // Replace with actual Stripe price ID
@@ -15,6 +11,12 @@ const PRICES = {
 
 export async function POST(request: NextRequest) {
   try {
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
     const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

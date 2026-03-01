@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 // Using Resend for email (free tier available)
 // Install: npm install resend
 // Alternative: SendGrid, Mailgun, etc.

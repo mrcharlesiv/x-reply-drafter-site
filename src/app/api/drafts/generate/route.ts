@@ -2,18 +2,19 @@ import { createClient } from '@supabase/supabase-js';
 import { Anthropic } from '@anthropic-ai/sdk';
 import { NextRequest, NextResponse } from 'next/server';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+export const dynamic = 'force-dynamic';
 
 const DAILY_LIMIT_FREE = 10;
 
 export async function POST(request: NextRequest) {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
+  const anthropic = new Anthropic({
+    apiKey: process.env.ANTHROPIC_API_KEY,
+  });
   try {
     // Get auth token from header
     const authHeader = request.headers.get('authorization');
