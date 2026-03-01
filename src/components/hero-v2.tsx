@@ -160,12 +160,10 @@ export function HeroV2() {
 
   return (
     <section className="relative min-h-screen overflow-hidden bg-gradient-to-b from-gray-950 via-gray-900 to-black">
-      {/* Subtle background gradient */}
+      {/* Static background gradient - NO floating */}
       <div className="absolute inset-0 overflow-hidden opacity-40">
-        <motion.div
+        <div
           className="absolute top-0 left-1/4 w-96 h-96 bg-blue-600 rounded-full mix-blend-screen filter blur-3xl"
-          animate={{ x: [0, 30, 0], y: [0, 40, 0] }}
-          transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut' }}
           style={{ opacity: 0.04 }}
         />
       </div>
@@ -273,17 +271,17 @@ export function HeroV2() {
 
           {/* RIGHT - Browser mockup (FLAT, NO 3D) */}
           <motion.div variants={itemVariants} className="relative h-full w-full">
-            {/* Browser container - ZERO 3D EFFECTS */}
+            {/* Browser container - COMPLETELY STATIC, NO FLOATING */}
             <div
               ref={browserRef}
               className="relative rounded-2xl overflow-hidden shadow-2xl border border-gray-700 bg-gray-950"
+              style={{
+                opacity: browserLoaded ? 1 : 0,
+                transform: browserLoaded ? 'scale(1)' : 'scale(0.92)',
+                transition: 'opacity 0.6s ease-out, transform 0.6s ease-out',
+              }}
             >
-              <motion.div
-                initial={{ opacity: 0, scale: 0.92 }}
-                animate={browserLoaded ? { opacity: 1, scale: 1 } : {}}
-                transition={{ duration: 0.6, ease: 'easeOut' }}
-                className="w-full"
-              >
+              <div className="w-full">
                 {/* Animated cursor - starts at browser edge */}
                 {cursorPos.visible && (
                   <motion.div
@@ -478,7 +476,7 @@ export function HeroV2() {
                     )}
                   </div>
                 </div>
-              </motion.div>
+              </div>
             </div>
           </motion.div>
         </motion.div>
