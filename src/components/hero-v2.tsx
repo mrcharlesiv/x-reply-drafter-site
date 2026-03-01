@@ -63,7 +63,7 @@ const Tweet = ({ author, handle, avatar, text, time, isActive }: TweetProps) => 
 export function HeroV2() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [typedText, setTypedText] = useState('');
-  const [showCursor, setShowCursor] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [showAlternatives, setShowAlternatives] = useState(false);
   const draftButtonRef = useRef<HTMLDivElement>(null);
 
@@ -71,21 +71,26 @@ export function HeroV2() {
     '@alexsmith Your perspective is refreshing. Have you considered how this scales across...';
 
   // =========================================================================
-  // MASTER ANIMATION SEQUENCE - Auto-play every 8 seconds
+  // MASTER ANIMATION SEQUENCE - FLUID, NO GAPS
+  // Total cycle: 7.5 seconds
   // =========================================================================
   useEffect(() => {
     const startAnimation = () => {
       setIsPlaying(true);
       setTypedText('');
       setShowAlternatives(false);
-      setShowCursor(false);
+      setIsGenerating(false);
 
-      // Phase 1: Cursor move (0-1.5s)
-      setTimeout(() => setShowCursor(true), 100);
+      // Phase 1: Button highlight (0-0.6s) - very quick
+      // (just show the button with glow)
 
-      // Phase 2: Start typing (1.5s)
+      // Phase 2: Button click effect + start generating (0.6-1.0s)
       setTimeout(() => {
-        setShowCursor(false);
+        setIsGenerating(true);
+      }, 600);
+
+      // Phase 3: Typing starts immediately (1.0s) - seamless transition
+      setTimeout(() => {
         let index = 0;
         const typeInterval = setInterval(() => {
           if (index < fullDraftText.length) {
@@ -93,27 +98,29 @@ export function HeroV2() {
             index++;
           } else {
             clearInterval(typeInterval);
-            // Phase 3: Show alternatives (4.5s)
-            setTimeout(() => setShowAlternatives(true), 300);
+            // Alternatives appear immediately after typing ends (no delay)
+            setShowAlternatives(true);
+            setIsGenerating(false);
           }
-        }, 50); // 50ms per character (readable pace)
+        }, 40); // Slightly faster: 40ms per character for snappier feel
 
         return () => clearInterval(typeInterval);
-      }, 1500);
+      }, 1000);
 
-      // Phase 4: Reset (8s)
+      // Phase 4: Reset and loop (7.5s)
       setTimeout(() => {
         setIsPlaying(false);
         setTypedText('');
         setShowAlternatives(false);
-      }, 8000);
+        setIsGenerating(false);
+      }, 7500);
     };
 
     // Auto-play on mount
     startAnimation();
 
-    // Loop every 9 seconds (8s animation + 1s gap)
-    const timer = setInterval(startAnimation, 9000);
+    // Loop every 8 seconds (7.5s animation + 0.5s gap)
+    const timer = setInterval(startAnimation, 8000);
     return () => clearInterval(timer);
   }, []);
 
@@ -298,13 +305,24 @@ export function HeroV2() {
                             ref={draftButtonRef}
                             initial={{ opacity: 0, scale: 0 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: 0.2, duration: 0.4 }}
+                            transition={{ delay: 0.1, duration: 0.3 }}
                             className="relative"
                           >
+                            {/* Click ripple effect */}
+                            {isGenerating && (
+                              <motion.div
+                                className="absolute inset-0 rounded-full bg-blue-400"
+                                initial={{ scale: 1, opacity: 0.5 }}
+                                animate={{ scale: 2, opacity: 0 }}
+                                transition={{ duration: 0.6 }}
+                              />
+                            )}
+
+                            {/* Button */}
                             <motion.button
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-full hover:bg-blue-500 transition-colors"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-full hover:bg-blue-500 transition-colors relative z-10"
                               animate={
-                                showCursor
+                                isPlaying
                                   ? {
                                       boxShadow: [
                                         '0 0 12px rgba(59, 130, 246, 0.3)',
@@ -315,52 +333,77 @@ export function HeroV2() {
                                   : {}
                               }
                               transition={{
-                                duration: 1.5,
+                                duration: 1.2,
                                 repeat: Infinity,
                               }}
                             >
                               <Sparkles size={13} />
-                              {showCursor ? 'Click me!' : 'Draft Reply'}
+                              {isGenerating ? 'Generating...' : 'Draft Reply'}
                             </motion.button>
                           </motion.div>
                         </div>
 
-                        {/* Generated text area */}
-                        {typedText && (
+                        {/* Generated text area - appears when generating or typing */}
+                        {(isGenerating || typedText) && (
                           <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ duration: 0.3 }}
-                            className="bg-gray-900 border border-gray-700 rounded-xl p-4 min-h-[100px]"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="bg-gray-900 border border-gray-700 rounded-xl p-4 min-h-[100px] flex items-center"
                           >
-                            <p className="text-white text-sm leading-relaxed font-normal">
-                              {typedText}
-                              {typedText.length < fullDraftText.length && (
-                                <motion.span
-                                  animate={{ opacity: [1, 0] }}
-                                  transition={{
-                                    duration: 0.7,
-                                    repeat: Infinity,
-                                  }}
-                                  className="text-blue-400 ml-0.5"
-                                >
-                                  |
-                                </motion.span>
-                              )}
-                            </p>
+                            {isGenerating && !typedText ? (
+                              // Animated generating dots
+                              <div className="flex items-center gap-2">
+                                <span className="text-gray-400 text-sm">Generating</span>
+                                <div className="flex gap-1">
+                                  <motion.span
+                                    animate={{ opacity: [0.5, 1, 0.5] }}
+                                    transition={{ duration: 1.2, repeat: Infinity, delay: 0 }}
+                                    className="w-1.5 h-1.5 bg-blue-400 rounded-full"
+                                  />
+                                  <motion.span
+                                    animate={{ opacity: [0.5, 1, 0.5] }}
+                                    transition={{ duration: 1.2, repeat: Infinity, delay: 0.2 }}
+                                    className="w-1.5 h-1.5 bg-blue-400 rounded-full"
+                                  />
+                                  <motion.span
+                                    animate={{ opacity: [0.5, 1, 0.5] }}
+                                    transition={{ duration: 1.2, repeat: Infinity, delay: 0.4 }}
+                                    className="w-1.5 h-1.5 bg-blue-400 rounded-full"
+                                  />
+                                </div>
+                              </div>
+                            ) : (
+                              // Typed text
+                              <p className="text-white text-sm leading-relaxed font-normal">
+                                {typedText}
+                                {typedText.length < fullDraftText.length && (
+                                  <motion.span
+                                    animate={{ opacity: [1, 0] }}
+                                    transition={{
+                                      duration: 0.6,
+                                      repeat: Infinity,
+                                    }}
+                                    className="text-blue-400 ml-0.5"
+                                  >
+                                    |
+                                  </motion.span>
+                                )}
+                              </p>
+                            )}
                           </motion.div>
                         )}
 
-                        {/* Alternatives */}
+                        {/* Alternatives - smooth, immediate appearance */}
                         {showAlternatives && (
                           <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            transition={{ duration: 0.4 }}
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.3 }}
                             className="space-y-2 pt-2 border-t border-gray-800"
                           >
                             <div className="text-xs font-semibold text-gray-400">
-                              Try these:
+                              Alternative options:
                             </div>
                             {[
                               'Brilliant work! The polish is impressive.',
@@ -369,9 +412,9 @@ export function HeroV2() {
                             ].map((text, i) => (
                               <motion.div
                                 key={i}
-                                initial={{ opacity: 0, x: -10 }}
+                                initial={{ opacity: 0, x: -8 }}
                                 animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: i * 0.1 }}
+                                transition={{ delay: i * 0.08, duration: 0.2 }}
                                 className="text-xs text-gray-300 bg-gray-800 px-3 py-2 rounded-lg hover:bg-gray-700 cursor-pointer transition-colors"
                               >
                                 {text}
