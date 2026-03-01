@@ -31,11 +31,7 @@ interface TweetProps {
 }
 
 const Tweet = ({ author, handle, avatar, text, time, isActive }: TweetProps) => (
-  <div
-    className={`border-b border-gray-700 pb-4 ${
-      isActive ? 'bg-gray-900 rounded-lg p-4' : ''
-    }`}
-  >
+  <div className={`border-b border-gray-700 pb-4 ${isActive ? 'bg-gray-900 rounded-lg p-4' : ''}`}>
     <div className="flex gap-3">
       <div className={`w-12 h-12 rounded-full flex-shrink-0 ${avatar}`} />
       <div className="flex-1 min-w-0">
@@ -57,40 +53,85 @@ export function HeroV2() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [showAlternatives, setShowAlternatives] = useState(false);
   const [browserLoaded, setBrowserLoaded] = useState(false);
+  const [cursorPos, setCursorPos] = useState({ x: 0, y: 0, visible: false });
   const draftButtonRef = useRef<HTMLDivElement>(null);
+  const browserRef = useRef<HTMLDivElement>(null);
 
   const fullDraftText =
     '@alexsmith Your perspective is refreshing. Have you considered how this scales across...';
 
   // =========================================================================
-  // PAGE LOAD - One-time entrance animation for browser mockup
-  // Then immediately start cursor sequence
+  // PAGE LOAD - One-time entrance animation
   // =========================================================================
   useEffect(() => {
-    // Entrance animation: fade + scale in (0.6s)
     setTimeout(() => setBrowserLoaded(true), 100);
-
-    // Start animation sequence after entrance completes
-    setTimeout(() => {
-      startAnimationSequence();
-    }, 700);
+    setTimeout(() => startAnimationSequence(), 700);
   }, []);
 
   // =========================================================================
-  // ANIMATION SEQUENCE - Loops every 7 seconds
+  // CURSOR ANIMATION - Moves from browser edge to button (NO 3D)
+  // =========================================================================
+  useEffect(() => {
+    if (isPlaying && draftButtonRef.current && browserRef.current) {
+      const browserRect = browserRef.current.getBoundingClientRect();
+      const buttonRect = draftButtonRef.current.getBoundingClientRect();
+
+      // Calculate positions relative to browser mockup
+      const buttonX = buttonRect.left - browserRect.left + buttonRect.width / 2;
+      const buttonY = buttonRect.top - browserRect.top + buttonRect.height / 2;
+
+      // Start cursor at browser edge (left side, inside the mockup)
+      const startX = 30;
+      const startY = 150;
+
+      // Animate cursor from start to button over 1.5 seconds
+      const startTime = Date.now();
+      const duration = 1500;
+
+      const animateCursor = () => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+
+        // Smooth cubic easing
+        const easeProgress =
+          progress < 0.5
+            ? 4 * progress * progress * progress
+            : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+        setCursorPos({
+          x: startX + (buttonX - startX) * easeProgress,
+          y: startY + (buttonY - startY) * easeProgress,
+          visible: true,
+        });
+
+        if (progress < 1) {
+          requestAnimationFrame(animateCursor);
+        } else {
+          setCursorPos({ x: 0, y: 0, visible: false });
+        }
+      };
+
+      const frameId = requestAnimationFrame(animateCursor);
+      return () => cancelAnimationFrame(frameId);
+    }
+  }, [isPlaying]);
+
+  // =========================================================================
+  // ANIMATION SEQUENCE - Main loop every 6.5 seconds
   // =========================================================================
   const startAnimationSequence = () => {
     setIsPlaying(true);
     setTypedText('');
     setShowAlternatives(false);
     setIsGenerating(false);
+    setCursorPos({ x: 0, y: 0, visible: false });
 
-    // Phase 1: Show button with glow (0-0.6s)
+    // Phase 1: Button highlights (0-0.6s)
     setTimeout(() => {
       setIsGenerating(true);
     }, 600);
 
-    // Phase 2: Start typing (0.6-1.0s, then continues)
+    // Phase 2: Text types (1.0-4.0s)
     setTimeout(() => {
       let index = 0;
       const typeInterval = setInterval(() => {
@@ -99,11 +140,10 @@ export function HeroV2() {
           index++;
         } else {
           clearInterval(typeInterval);
-          // Alternatives appear immediately
           setShowAlternatives(true);
           setIsGenerating(false);
         }
-      }, 40); // 40ms per character
+      }, 40);
 
       return () => clearInterval(typeInterval);
     }, 1000);
@@ -114,14 +154,13 @@ export function HeroV2() {
       setTypedText('');
       setShowAlternatives(false);
 
-      // Quick reset, then loop
       setTimeout(() => startAnimationSequence(), 300);
     }, 6500);
   };
 
   return (
     <section className="relative min-h-screen overflow-hidden bg-gradient-to-b from-gray-950 via-gray-900 to-black">
-      {/* Subtle background */}
+      {/* Subtle background gradient */}
       <div className="absolute inset-0 overflow-hidden opacity-40">
         <motion.div
           className="absolute top-0 left-1/4 w-96 h-96 bg-blue-600 rounded-full mix-blend-screen filter blur-3xl"
@@ -146,9 +185,7 @@ export function HeroV2() {
               className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 border border-gray-800 rounded-full hover:border-blue-500 transition-colors"
             >
               <Sparkles size={16} className="text-blue-400" />
-              <span className="text-sm text-gray-300">
-                AI-powered replies in seconds
-              </span>
+              <span className="text-sm text-gray-300">AI-powered replies in seconds</span>
             </motion.div>
 
             <motion.h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold leading-tight tracking-tight">
@@ -188,15 +225,11 @@ export function HeroV2() {
               variants={itemVariants}
               className="text-lg sm:text-xl text-gray-400 leading-relaxed max-w-lg"
             >
-              Stop staring at a blank reply box. Our AI generates witty, engaging
-              replies that match your voice.{' '}
-              <span className="text-blue-400 font-semibold">Just add the extension.</span>
+              Stop staring at a blank reply box. Our AI generates witty, engaging replies that match your
+              voice. <span className="text-blue-400 font-semibold">Just add the extension.</span>
             </motion.p>
 
-            <motion.div
-              variants={itemVariants}
-              className="flex flex-col sm:flex-row gap-4 pt-6"
-            >
+            <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-4 pt-6">
               <motion.a
                 href="#"
                 whileHover={{ scale: 1.05, boxShadow: '0 0 30px rgba(59, 130, 246, 0.4)' }}
@@ -204,10 +237,7 @@ export function HeroV2() {
                 className="group inline-flex items-center justify-center gap-2 px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-full transition-all duration-300"
               >
                 Add to Chrome - Free
-                <motion.span
-                  animate={{ x: [0, 4, 0] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                >
+                <motion.span animate={{ x: [0, 4, 0] }} transition={{ duration: 2, repeat: Infinity }}>
                   <ArrowRight size={20} />
                 </motion.span>
               </motion.a>
@@ -241,206 +271,215 @@ export function HeroV2() {
             </motion.div>
           </motion.div>
 
-          {/* RIGHT - Browser mockup (ONE entrance animation, then static) */}
-          <motion.div
-            variants={itemVariants}
-            className="relative h-full w-full"
-          >
-            {/* Browser window - entrance: fade + scale in */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.92 }}
-              animate={browserLoaded ? { opacity: 1, scale: 1 } : {}}
-              transition={{ duration: 0.6, ease: 'easeOut' }}
+          {/* RIGHT - Browser mockup (FLAT, NO 3D) */}
+          <motion.div variants={itemVariants} className="relative h-full w-full">
+            {/* Browser container - ZERO 3D EFFECTS */}
+            <div
+              ref={browserRef}
               className="relative rounded-2xl overflow-hidden shadow-2xl border border-gray-700 bg-gray-950"
             >
-              {/* Chrome bar */}
-              <div className="bg-gray-900 border-b border-gray-700 px-4 py-3 flex items-center gap-2 backdrop-blur">
-                <div className="flex gap-2">
-                  <div className="w-3 h-3 rounded-full bg-red-500" />
-                  <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                  <div className="w-3 h-3 rounded-full bg-green-500" />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.92 }}
+                animate={browserLoaded ? { opacity: 1, scale: 1 } : {}}
+                transition={{ duration: 0.6, ease: 'easeOut' }}
+                className="w-full"
+              >
+                {/* Animated cursor - starts at browser edge */}
+                {cursorPos.visible && (
+                  <motion.div
+                    className="absolute pointer-events-none z-50"
+                    style={{ left: cursorPos.x, top: cursorPos.y }}
+                    animate={{ opacity: [1, 0.8, 1] }}
+                    transition={{ duration: 0.6, repeat: Infinity }}
+                  >
+                    <div className="w-4 h-4 bg-blue-400 rounded-full shadow-lg shadow-blue-400/50" />
+                  </motion.div>
+                )}
+
+                {/* Chrome bar */}
+                <div className="bg-gray-900 border-b border-gray-700 px-4 py-3 flex items-center gap-2 backdrop-blur">
+                  <div className="flex gap-2">
+                    <div className="w-3 h-3 rounded-full bg-red-500" />
+                    <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                    <div className="w-3 h-3 rounded-full bg-green-500" />
+                  </div>
+                  <div className="flex-1 text-center text-xs text-gray-500 font-mono">x.com</div>
                 </div>
-                <div className="flex-1 text-center text-xs text-gray-500 font-mono">
-                  x.com
-                </div>
-              </div>
 
-              {/* X Feed */}
-              <div className="bg-gray-950 min-h-[600px] overflow-hidden">
-                <div className="p-6 space-y-4 border-r border-gray-800">
-                  {/* Tweet 1 */}
-                  <Tweet
-                    author="Alex Smith"
-                    handle="alexsmith"
-                    avatar="bg-gradient-to-br from-blue-500 to-blue-600"
-                    text="Just shipped our new API. Months of work finally live. Feels surreal."
-                    time="2h"
-                    isActive={isPlaying}
-                  />
+                {/* X Feed */}
+                <div className="bg-gray-950 min-h-[600px] overflow-hidden">
+                  <div className="p-6 space-y-4 border-r border-gray-800">
+                    {/* Tweet 1 */}
+                    <Tweet
+                      author="Alex Smith"
+                      handle="alexsmith"
+                      avatar="bg-gradient-to-br from-blue-500 to-blue-600"
+                      text="Just shipped our new API. Months of work finally live. Feels surreal."
+                      time="2h"
+                      isActive={isPlaying}
+                    />
 
-                  {/* Tweet 2 */}
-                  <Tweet
-                    author="Sophia Chen"
-                    handle="sophiachen_ai"
-                    avatar="bg-gradient-to-br from-purple-500 to-pink-500"
-                    text="The best product launches are the ones nobody sees coming. Sometimes shipping quietly is the move."
-                    time="4h"
-                    isActive={false}
-                  />
+                    {/* Tweet 2 */}
+                    <Tweet
+                      author="Sophia Chen"
+                      handle="sophiachen_ai"
+                      avatar="bg-gradient-to-br from-purple-500 to-pink-500"
+                      text="The best product launches are the ones nobody sees coming. Sometimes shipping quietly is the move."
+                      time="4h"
+                      isActive={false}
+                    />
 
-                  {/* Reply section - animated during sequence */}
-                  {isPlaying && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 20 }}
-                      transition={{ duration: 0.4 }}
-                      className="border-l-4 border-blue-500 pl-4 py-4"
-                    >
-                      <div className="space-y-3">
-                        {/* Header */}
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-gray-500">
-                            Replying to{' '}
-                            <span className="text-blue-400">@alexsmith</span>
-                          </span>
-                          <motion.div
-                            ref={draftButtonRef}
-                            initial={{ opacity: 0, scale: 0 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: 0.1, duration: 0.3 }}
-                            className="relative"
-                          >
-                            {/* Ripple effect */}
-                            {isGenerating && (
-                              <motion.div
-                                className="absolute inset-0 rounded-full bg-blue-400"
-                                initial={{ scale: 1, opacity: 0.5 }}
-                                animate={{ scale: 2, opacity: 0 }}
-                                transition={{ duration: 0.6 }}
-                              />
-                            )}
-
-                            {/* Button */}
-                            <motion.button
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-full hover:bg-blue-500 transition-colors relative z-10"
-                              animate={
-                                isPlaying
-                                  ? {
-                                      boxShadow: [
-                                        '0 0 12px rgba(59, 130, 246, 0.3)',
-                                        '0 0 20px rgba(59, 130, 246, 0.5)',
-                                        '0 0 12px rgba(59, 130, 246, 0.3)',
-                                      ],
-                                    }
-                                  : {}
-                              }
-                              transition={{
-                                duration: 1.2,
-                                repeat: Infinity,
-                              }}
+                    {/* Reply section */}
+                    {isPlaying && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 20 }}
+                        transition={{ duration: 0.4 }}
+                        className="border-l-4 border-blue-500 pl-4 py-4"
+                      >
+                        <div className="space-y-3">
+                          {/* Header */}
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-500">
+                              Replying to <span className="text-blue-400">@alexsmith</span>
+                            </span>
+                            <motion.div
+                              ref={draftButtonRef}
+                              initial={{ opacity: 0, scale: 0 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ delay: 0.1, duration: 0.3 }}
+                              className="relative"
                             >
-                              <Sparkles size={13} />
-                              {isGenerating ? 'Generating...' : 'Draft Reply'}
-                            </motion.button>
-                          </motion.div>
-                        </div>
+                              {/* Ripple effect */}
+                              {isGenerating && (
+                                <motion.div
+                                  className="absolute inset-0 rounded-full bg-blue-400"
+                                  initial={{ scale: 1, opacity: 0.5 }}
+                                  animate={{ scale: 2, opacity: 0 }}
+                                  transition={{ duration: 0.6 }}
+                                />
+                              )}
 
-                        {/* Generated text */}
-                        {(isGenerating || typedText) && (
-                          <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.2 }}
-                            className="bg-gray-900 border border-gray-700 rounded-xl p-4 min-h-[100px] flex items-center"
-                          >
-                            {isGenerating && !typedText ? (
-                              <div className="flex items-center gap-2">
-                                <span className="text-gray-400 text-sm">Generating</span>
-                                <div className="flex gap-1">
-                                  <motion.span
-                                    animate={{ opacity: [0.5, 1, 0.5] }}
-                                    transition={{
-                                      duration: 1.2,
-                                      repeat: Infinity,
-                                      delay: 0,
-                                    }}
-                                    className="w-1.5 h-1.5 bg-blue-400 rounded-full"
-                                  />
-                                  <motion.span
-                                    animate={{ opacity: [0.5, 1, 0.5] }}
-                                    transition={{
-                                      duration: 1.2,
-                                      repeat: Infinity,
-                                      delay: 0.2,
-                                    }}
-                                    className="w-1.5 h-1.5 bg-blue-400 rounded-full"
-                                  />
-                                  <motion.span
-                                    animate={{ opacity: [0.5, 1, 0.5] }}
-                                    transition={{
-                                      duration: 1.2,
-                                      repeat: Infinity,
-                                      delay: 0.4,
-                                    }}
-                                    className="w-1.5 h-1.5 bg-blue-400 rounded-full"
-                                  />
-                                </div>
-                              </div>
-                            ) : (
-                              <p className="text-white text-sm leading-relaxed font-normal">
-                                {typedText}
-                                {typedText.length < fullDraftText.length && (
-                                  <motion.span
-                                    animate={{ opacity: [1, 0] }}
-                                    transition={{
-                                      duration: 0.6,
-                                      repeat: Infinity,
-                                    }}
-                                    className="text-blue-400 ml-0.5"
-                                  >
-                                    |
-                                  </motion.span>
-                                )}
-                              </p>
-                            )}
-                          </motion.div>
-                        )}
-
-                        {/* Alternatives */}
-                        {showAlternatives && (
-                          <motion.div
-                            initial={{ opacity: 0, y: 8 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.3 }}
-                            className="space-y-2 pt-2 border-t border-gray-800"
-                          >
-                            <div className="text-xs font-semibold text-gray-400">
-                              Alternative options:
-                            </div>
-                            {[
-                              'Brilliant work! The polish is impressive.',
-                              'This is incredible. The execution is flawless.',
-                              'Game-changing work. How long did this take...',
-                            ].map((text, i) => (
-                              <motion.div
-                                key={i}
-                                initial={{ opacity: 0, x: -8 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: i * 0.08, duration: 0.2 }}
-                                className="text-xs text-gray-300 bg-gray-800 px-3 py-2 rounded-lg hover:bg-gray-700 cursor-pointer transition-colors"
+                              {/* Button */}
+                              <motion.button
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-full hover:bg-blue-500 transition-colors relative z-10"
+                                animate={
+                                  isPlaying
+                                    ? {
+                                        boxShadow: [
+                                          '0 0 12px rgba(59, 130, 246, 0.3)',
+                                          '0 0 20px rgba(59, 130, 246, 0.5)',
+                                          '0 0 12px rgba(59, 130, 246, 0.3)',
+                                        ],
+                                      }
+                                    : {}
+                                }
+                                transition={{
+                                  duration: 1.2,
+                                  repeat: Infinity,
+                                }}
                               >
-                                {text}
-                              </motion.div>
-                            ))}
-                          </motion.div>
-                        )}
-                      </div>
-                    </motion.div>
-                  )}
+                                <Sparkles size={13} />
+                                {isGenerating ? 'Generating...' : 'Draft Reply'}
+                              </motion.button>
+                            </motion.div>
+                          </div>
+
+                          {/* Generated text */}
+                          {(isGenerating || typedText) && (
+                            <motion.div
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.2 }}
+                              className="bg-gray-900 border border-gray-700 rounded-xl p-4 min-h-[100px] flex items-center"
+                            >
+                              {isGenerating && !typedText ? (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-gray-400 text-sm">Generating</span>
+                                  <div className="flex gap-1">
+                                    <motion.span
+                                      animate={{ opacity: [0.5, 1, 0.5] }}
+                                      transition={{
+                                        duration: 1.2,
+                                        repeat: Infinity,
+                                        delay: 0,
+                                      }}
+                                      className="w-1.5 h-1.5 bg-blue-400 rounded-full"
+                                    />
+                                    <motion.span
+                                      animate={{ opacity: [0.5, 1, 0.5] }}
+                                      transition={{
+                                        duration: 1.2,
+                                        repeat: Infinity,
+                                        delay: 0.2,
+                                      }}
+                                      className="w-1.5 h-1.5 bg-blue-400 rounded-full"
+                                    />
+                                    <motion.span
+                                      animate={{ opacity: [0.5, 1, 0.5] }}
+                                      transition={{
+                                        duration: 1.2,
+                                        repeat: Infinity,
+                                        delay: 0.4,
+                                      }}
+                                      className="w-1.5 h-1.5 bg-blue-400 rounded-full"
+                                    />
+                                  </div>
+                                </div>
+                              ) : (
+                                <p className="text-white text-sm leading-relaxed font-normal">
+                                  {typedText}
+                                  {typedText.length < fullDraftText.length && (
+                                    <motion.span
+                                      animate={{ opacity: [1, 0] }}
+                                      transition={{
+                                        duration: 0.6,
+                                        repeat: Infinity,
+                                      }}
+                                      className="text-blue-400 ml-0.5"
+                                    >
+                                      |
+                                    </motion.span>
+                                  )}
+                                </p>
+                              )}
+                            </motion.div>
+                          )}
+
+                          {/* Alternatives */}
+                          {showAlternatives && (
+                            <motion.div
+                              initial={{ opacity: 0, y: 8 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.3 }}
+                              className="space-y-2 pt-2 border-t border-gray-800"
+                            >
+                              <div className="text-xs font-semibold text-gray-400">Alternative options:</div>
+                              {[
+                                'Brilliant work! The polish is impressive.',
+                                'This is incredible. The execution is flawless.',
+                                'Game-changing work. How long did this take...',
+                              ].map((text, i) => (
+                                <motion.div
+                                  key={i}
+                                  initial={{ opacity: 0, x: -8 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  transition={{ delay: i * 0.08, duration: 0.2 }}
+                                  className="text-xs text-gray-300 bg-gray-800 px-3 py-2 rounded-lg hover:bg-gray-700 cursor-pointer transition-colors"
+                                >
+                                  {text}
+                                </motion.div>
+                              ))}
+                            </motion.div>
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </motion.div>
+              </motion.div>
+            </div>
           </motion.div>
         </motion.div>
       </div>
