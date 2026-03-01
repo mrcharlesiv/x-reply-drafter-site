@@ -1,4 +1,4 @@
-import { Hero } from '@/components/hero';
+import { HeroV2 } from '@/components/hero-v2';
 import { Features } from '@/components/features';
 import { Pricing } from '@/components/pricing';
 import { FAQ } from '@/components/faq';
@@ -11,7 +11,7 @@ export default function Home() {
       <div className="gradient-mesh" />
       
       {/* Hero Section */}
-      <Hero />
+      <HeroV2 />
       
       {/* Features Section */}
       <section id="features">
