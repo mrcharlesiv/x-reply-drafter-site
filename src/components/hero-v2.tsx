@@ -8,7 +8,7 @@ const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: { staggerChildren: 0.15, delayChildren: 0.2 },
+    transition: { staggerChildren: 0, delayChildren: 0 },
   },
 };
 
@@ -17,7 +17,7 @@ const itemVariants = {
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.8, ease: 'easeOut' },
+    transition: { duration: 0.3, ease: 'easeOut' },
   },
 };
 
@@ -194,20 +194,9 @@ export function HeroV2() {
                 className="block"
               >
                 Draft{' '}
-                <motion.span
-                  className="bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-500 bg-clip-text text-transparent"
-                  animate={{
-                    backgroundPosition: ['0% center', '100% center', '0% center'],
-                  }}
-                  transition={{
-                    duration: 5,
-                    repeat: Infinity,
-                    ease: 'easeInOut',
-                  }}
-                  style={{ backgroundSize: '200% 200%' }}
-                >
+                <span className="bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-500 bg-clip-text text-transparent">
                   viral replies
-                </motion.span>
+                </span>
               </motion.span>
               <motion.span
                 initial={{ opacity: 0, y: 20 }}
