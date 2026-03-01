@@ -346,7 +346,7 @@ export function Hero() {
   // RENDER
   // =========================================================================
   return (
-    <section className="relative min-h-screen overflow-hidden bg-gradient-to-b from-gray-950 via-gray-900 to-black" style={{ fontSmoothing: 'antialiased', WebkitFontSmoothing: 'antialiased' }}>
+    <section className="relative min-h-screen overflow-hidden bg-gradient-to-b from-gray-950 via-gray-900 to-black">
       {/* ANIMATED BACKGROUND - Subtle floating gradient orbs */}
       <div className="absolute inset-0 overflow-hidden">
         {/* Gradient mesh background */}
@@ -669,7 +669,6 @@ export function Hero() {
                               animate={{ opacity: 1 }}
                               transition={{ delay: 1.8 }}
                               className="bg-gray-900 border border-gray-700 rounded-xl p-4 min-h-[100px]"
-                              style={{ fontSmoothing: 'antialiased', WebkitFontSmoothing: 'antialiased' }}
                             >
                               <p className="text-white text-sm leading-relaxed font-normal">
                                 {typedText}
