@@ -54,15 +54,29 @@ const scaleInVariants = {
   },
 };
 
+// Subtle continuous 3D rotation with premium easing
+const browserTiltVariants = {
+  animate: {
+    rotateX: [0, 3, 0],
+    rotateY: [-3, 3, -3],
+    rotateZ: [0, 1, 0],
+    transition: {
+      duration: 14,
+      repeat: Infinity,
+      ease: [0.25, 0.46, 0.45, 0.94], // cubic-bezier for smoothness
+    },
+  },
+};
+
 const glowVariants = {
   animate: {
     boxShadow: [
-      '0 0 20px rgba(59, 130, 246, 0.3)',
-      '0 0 40px rgba(59, 130, 246, 0.5)',
-      '0 0 20px rgba(59, 130, 246, 0.3)',
+      '0 0 20px rgba(59, 130, 246, 0.2)',
+      '0 0 30px rgba(59, 130, 246, 0.3)',
+      '0 0 20px rgba(59, 130, 246, 0.2)',
     ],
     transition: {
-      duration: 2,
+      duration: 3,
       repeat: Infinity,
       ease: 'easeInOut',
     },
@@ -188,7 +202,7 @@ export function Hero() {
   const fullDraftText = '@alexsmith Your perspective is refreshing. Have you considered how this scales across...';
 
   // =========================================================================
-  // CYCLE THROUGH ANIMATION SEQUENCE
+  // MASTER CYCLE: 14 SECONDS (all animations coordinate to this)
   // =========================================================================
   useEffect(() => {
     const cycleTimer = setInterval(() => {
@@ -199,7 +213,15 @@ export function Hero() {
   }, []);
 
   // =========================================================================
-  // CURSOR ANIMATION - Smooth movement to Draft Reply button
+  // PHASE TIMING (all within the 14s cycle):
+  // 0-3s:   Browser rotates subtly (phase 0)
+  // 3-5s:   Cursor animates to button (phase 1)
+  // 5-11s:  Text generates + types (phase 2)
+  // 11-14s: Fade & reset (phase 3)
+  // =========================================================================
+
+  // =========================================================================
+  // CURSOR ANIMATION - Smooth bezier curve to Draft Reply button
   // =========================================================================
   useEffect(() => {
     if (cyclePhase === 1 && draftButtonRef.current) {
@@ -209,35 +231,45 @@ export function Hero() {
       const targetX = rect.left + rect.width / 2 - 12;
       const targetY = rect.top + rect.height / 2 - 12;
 
+      // Use Framer Motion-style animation with smooth easing
       let currentX = 100;
       let currentY = 100;
-      const steps = 30;
-      let step = 0;
+      const duration = 1800; // 1.8s for cursor to reach button
+      const startTime = Date.now();
 
-      const moveInterval = setInterval(() => {
-        step++;
-        const progress = step / steps;
-        currentX = 100 + (targetX - 100) * progress;
-        currentY = 100 + (targetY - 100) * progress;
+      const animateFrame = () => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // Cubic bezier easing for smooth motion (ease-in-out-cubic)
+        const easeProgress = progress < 0.5 
+          ? 4 * progress * progress * progress 
+          : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+        currentX = 100 + (targetX - 100) * easeProgress;
+        currentY = 100 + (targetY - 100) * easeProgress;
         setCursorPos({ x: currentX, y: currentY, show: true });
 
-        if (step >= steps) {
-          clearInterval(moveInterval);
+        if (progress < 1) {
+          requestAnimationFrame(animateFrame);
+        } else {
           setTimeout(() => {
             setGenerateState('generating');
-          }, 300);
+          }, 200);
         }
-      }, 16);
+      };
+
+      const frameId = requestAnimationFrame(animateFrame);
 
       return () => {
-        clearInterval(moveInterval);
+        cancelAnimationFrame(frameId);
         setShowCursor(false);
       };
     }
   }, [cyclePhase]);
 
   // =========================================================================
-  // TYPING EFFECT - Character-by-character reveal
+  // TYPING EFFECT - Natural smooth character reveal (60ms per char)
   // =========================================================================
   useEffect(() => {
     if (cyclePhase === 2 && generateState === 'generating') {
@@ -251,9 +283,9 @@ export function Hero() {
           index++;
         } else {
           clearInterval(typeInterval);
-          setTimeout(() => setShowAlternatives(true), 500);
+          setTimeout(() => setShowAlternatives(true), 600);
         }
-      }, 25);
+      }, 60); // 60ms per character = natural reading speed
 
       return () => clearInterval(typeInterval);
     }
@@ -278,48 +310,48 @@ export function Hero() {
   // =========================================================================
   return (
     <section className="relative min-h-screen overflow-hidden bg-gradient-to-b from-gray-950 via-gray-900 to-black">
-      {/* ANIMATED BACKGROUND - Floating gradient orbs with parallax */}
+      {/* ANIMATED BACKGROUND - SUBTLE floating gradient orbs */}
       <div className="absolute inset-0 overflow-hidden">
-        {/* Gradient mesh background */}
-        <div className="absolute inset-0 opacity-40">
+        {/* Gradient mesh background - much more subtle */}
+        <div className="absolute inset-0 opacity-30">
           <motion.div
             className="absolute top-0 left-1/4 w-96 h-96 bg-blue-600 rounded-full mix-blend-screen filter blur-3xl"
             animate={{
-              x: [0, 50, 0],
-              y: [0, 80, 0],
-            }}
-            transition={{
-              duration: 15,
-              repeat: Infinity,
-              ease: 'easeInOut',
-            }}
-            style={{ opacity: 0.08 }}
-          />
-          <motion.div
-            className="absolute top-1/3 right-1/4 w-80 h-80 bg-purple-600 rounded-full mix-blend-screen filter blur-3xl"
-            animate={{
-              x: [0, -60, 0],
-              y: [0, -40, 0],
+              x: [0, 30, 0],
+              y: [0, 40, 0],
             }}
             transition={{
               duration: 18,
               repeat: Infinity,
-              ease: 'easeInOut',
+              ease: [0.25, 0.46, 0.45, 0.94],
             }}
-            style={{ opacity: 0.06 }}
+            style={{ opacity: 0.04 }}
           />
           <motion.div
-            className="absolute bottom-1/4 left-1/3 w-72 h-72 bg-cyan-600 rounded-full mix-blend-screen filter blur-3xl"
+            className="absolute top-1/3 right-1/4 w-80 h-80 bg-purple-600 rounded-full mix-blend-screen filter blur-3xl"
             animate={{
-              x: [0, 40, 0],
-              y: [0, -60, 0],
+              x: [0, -40, 0],
+              y: [0, -30, 0],
             }}
             transition={{
               duration: 20,
               repeat: Infinity,
-              ease: 'easeInOut',
+              ease: [0.25, 0.46, 0.45, 0.94],
             }}
-            style={{ opacity: 0.05 }}
+            style={{ opacity: 0.03 }}
+          />
+          <motion.div
+            className="absolute bottom-1/4 left-1/3 w-72 h-72 bg-cyan-600 rounded-full mix-blend-screen filter blur-3xl"
+            animate={{
+              x: [0, 25, 0],
+              y: [0, -35, 0],
+            }}
+            transition={{
+              duration: 22,
+              repeat: Infinity,
+              ease: [0.25, 0.46, 0.45, 0.94],
+            }}
+            style={{ opacity: 0.02 }}
           />
         </div>
 
@@ -466,41 +498,33 @@ export function Hero() {
             className="relative h-full w-full"
             ref={browserRef}
           >
-            {/* 3D Perspective container */}
+            {/* 3D Perspective container - SMOOTH CONTINUOUS ROTATION */}
             <div
               style={{
-                perspective: '1200px',
+                perspective: '1500px',
                 transformStyle: 'preserve-3d',
               }}
             >
-              {/* Browser window with 3D tilt */}
+              {/* Browser window with smooth continuous 3D transforms */}
               <motion.div
-                animate={{
-                  rotateX: [0, 2, 0],
-                  rotateY: [-5, 0, 5],
-                }}
-                transition={{
-                  duration: 6,
-                  repeat: Infinity,
-                  ease: 'easeInOut',
-                }}
+                variants={browserTiltVariants}
+                animate="animate"
                 style={{
                   transformStyle: 'preserve-3d',
-                  transformPerspective: '1200px',
                 }}
                 className="relative w-full"
               >
-                {/* Glow background */}
+                {/* Glow background - SUBTLE */}
                 <motion.div
-                  className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 blur-2xl opacity-20 pointer-events-none"
+                  className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 blur-2xl opacity-10 pointer-events-none"
                   animate={{
-                    opacity: [0.15, 0.3, 0.15],
-                    scale: [0.95, 1.05, 0.95],
+                    opacity: [0.08, 0.15, 0.08],
+                    scale: [0.98, 1.02, 0.98],
                   }}
                   transition={{
-                    duration: 4,
+                    duration: 6,
                     repeat: Infinity,
-                    ease: 'easeInOut',
+                    ease: [0.25, 0.46, 0.45, 0.94],
                   }}
                 />
 
@@ -584,10 +608,20 @@ export function Hero() {
                               className="relative"
                             >
                               <motion.button
-                                variants={glowVariants}
-                                animate={cyclePhase >= 1 ? 'animate' : 'initial'}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-full hover:bg-blue-500 transition-colors relative z-10"
-                              >
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-full hover:bg-blue-500 transition-colors relative z-10"
+                              animate={cyclePhase >= 1 ? {
+                                boxShadow: [
+                                  '0 0 12px rgba(59, 130, 246, 0.3)',
+                                  '0 0 20px rgba(59, 130, 246, 0.4)',
+                                  '0 0 12px rgba(59, 130, 246, 0.3)',
+                                ]
+                              } : {}}
+                              transition={{
+                                duration: 2,
+                                repeat: Infinity,
+                                ease: 'easeInOut',
+                              }}
+                            >
                                 <Sparkles size={13} />
                                 {generateState === 'idle' || generateState === 'generating'
                                   ? 'Draft Reply'
@@ -667,17 +701,17 @@ export function Hero() {
               </motion.div>
             </div>
 
-            {/* Floating accent elements */}
+            {/* Floating accent elements - subtle depth */}
             <motion.div
-              className="absolute -top-8 -right-8 w-32 h-32 bg-blue-500 rounded-full filter blur-3xl opacity-10 pointer-events-none"
+              className="absolute -top-8 -right-8 w-32 h-32 bg-blue-500 rounded-full filter blur-3xl opacity-5 pointer-events-none"
               animate={{
-                x: [0, 20, 0],
-                y: [0, -20, 0],
+                x: [0, 15, 0],
+                y: [0, -15, 0],
               }}
               transition={{
-                duration: 8,
+                duration: 10,
                 repeat: Infinity,
-                ease: 'easeInOut',
+                ease: [0.25, 0.46, 0.45, 0.94],
               }}
             />
           </motion.div>
